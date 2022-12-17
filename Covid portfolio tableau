@@ -1,1 +1,81 @@
 
+-- 1
+-- Global numbers
+
+SELECT 
+    SUM(new_cases) AS total_cases,
+    SUM(new_deaths) AS total_deaths,
+    SUM(new_deaths) / SUM(new_cases) * 100 AS DeathPercentage
+FROM
+    covid.covid_deaths
+WHERE
+    continent IS NOT NULL;
+
+-- 2
+-- We take these out as they are not inluded in the above queries and want to stay consistent
+-- European Union is part of Europe
+SELECT 
+    location, SUM(new_deaths) AS total_death_count
+FROM
+    covid.covid_deaths
+WHERE
+    continent IS NULL
+        AND location NOT IN ('World' , 'European Union', 'International','high income','upper middle income','lower middle income','low income')
+GROUP BY location
+ORDER BY 2 DESC;
+
+-- 3
+-- country with highest infection rate
+
+SELECT 
+    location,
+    population,
+    MAX(total_cases) AS highestinfectioncount,
+    MAX(total_cases / population) * 100 AS highest_infection_rate
+FROM
+    covid.covid_deaths
+WHERE
+    continent IS NOT NULL
+GROUP BY 1 , 2
+ORDER BY 4 DESC;
+
+-- 4
+
+SELECT 
+    location,
+    population,date,
+    MAX(total_cases) AS highestinfectioncount,
+    MAX(total_cases / population) * 100 AS highest_infection_rate
+FROM
+    covid.covid_deaths
+WHERE
+    continent IS NOT NULL
+GROUP BY 1 , 2 , date
+ORDER BY 4 DESC;
+
+-- 5
+-- Total Population vs Vaccinations
+select cd.continent,cd.location,cd.date,cd.population,cv.new_vaccinations,
+sum(cv.new_vaccinations) over(partition by cd.location order by cd.location,cd.date) as Rollingpeoplevaccinated
+from covid.covid_deaths cd
+join covid.covid_vaccinations cv
+on  cd.location=cv.location and cd.date=cv.date
+where  cd.continent is not null
+order by 1,2,3;
+
+-- 6
+-- Total Population vs Vaccinations
+-- Shows Percentage of Population that has recieved at least one Covid Vaccine
+with temp_vacc as(
+select cd.continent,cd.location,cd.date,cd.population,cv.new_vaccinations,
+sum(cv.new_vaccinations) over(partition by cd.location order by cd.location,cd.date) as Rollingpeoplevaccinated
+from covid.covid_deaths cd
+join covid.covid_vaccinations cv
+on  cd.location=cv.location and cd.date=cv.date
+where  cd.continent is not null
+order by 1,2,3)
+select continent,location,date, 
+(rollingpeoplevaccinated / population )*100 as percentage_people_vacc
+from temp_vacc;
+
+
