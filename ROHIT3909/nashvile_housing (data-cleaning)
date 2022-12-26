@@ -1,0 +1,99 @@
+
+-- Populate Property Address data
+
+  
+UPDATE Nashvile_Housing a
+        JOIN
+    Nashvile_Housing b ON a.parcelid = b.parcelid
+        AND a.uniqueid <> b.uniqueid 
+SET 
+    a.propertyaddress = IFNULL(a.propertyaddress, b.propertyaddress)
+WHERE
+    a.propertyaddress IS NULL;
+    commit;
+    
+    -- Breaking out Address into Individual Columns (Address, City, State)
+    
+SELECT 
+    propertyaddress
+FROM
+    nashvile_housing.nashvile_housing;
+
+SELECT 
+    propertyaddress,
+    SUBSTR(propertyaddress, 1, LOCATE(',', propertyaddress) - 1) AS address,
+    SUBSTR(propertyaddress,LOCATE(',', propertyaddress) + 1) AS city
+FROM
+    nashvile_housing;
+
+alter table nashvile_housing
+add propertysplitaddress nvarchar(255);
+
+UPDATE nashvile_housing 
+SET 
+    propertysplitaddress = SUBSTR(propertyaddress,1,LOCATE(',', propertyaddress) - 1);
+
+alter table nashvile_housing
+add propertysplitcity nvarchar(255);
+
+UPDATE nashvile_housing 
+SET 
+    propertysplitcity = SUBSTR(propertyaddress,LOCATE(',', propertyaddress) + 1);
+
+SELECT 
+    *
+FROM
+    nashvile_housing;
+    
+-- Breaking owner address in to column(i.e. address,city,state) 
+
+SELECT 
+    owneraddress,
+    SUBSTRING_INDEX(SUBSTRING_INDEX(owneraddress, ',', 2),',',1) AS address,
+    SUBSTRING_INDEX(SUBSTRING_INDEX(owneraddress, ',', 2), ',',- 1) AS city,
+    SUBSTRING_INDEX(owneraddress, ',', - 1) AS state
+FROM
+    nashvile_housing;
+    
+    alter table nashvile_housing
+add ownersplitaddress nvarchar(255);
+
+
+UPDATE nashvile_housing 
+SET 
+    ownersplitaddress = SUBSTRING_INDEX(SUBSTRING_INDEX(owneraddress, ',', 2),
+            ',',
+            1);
+    
+        alter table nashvile_housing
+add ownersplitcity nvarchar(255);
+
+UPDATE nashvile_housing 
+SET 
+    ownersplitcity = SUBSTRING_INDEX(SUBSTRING_INDEX(owneraddress, ',', 2), ',',- 1);
+        
+        alter table nashvile_housing
+add ownersplitstate nvarchar(255);
+
+UPDATE nashvile_housing 
+SET 
+    ownersplitstate = SUBSTRING_INDEX(owneraddress, ',', - 1);
+    
+
+-- Delete Unused Columns
+
+alter table nashvile_housing
+drop column OwnerAddress;
+commit;
+
+-- Change Y and N to Yes and No in "Sold as Vacant" field
+
+select soldasvacant from nashvile_housing
+where soldasvacant='n' or soldasvacant='y';
+
+update nashvile_housing
+set soldasvacant = case when soldasvacant='y' then 'yes'
+when soldasvacant='n' then 'no' 
+else soldasvacant
+end;
+
